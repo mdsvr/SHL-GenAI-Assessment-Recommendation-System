@@ -1,8 +1,7 @@
-streamlit
+gradio
 sentence-transformers
 faiss-cpu
 torch
-pandas
 numpy
-requests
+pandas
 scikit-learn
