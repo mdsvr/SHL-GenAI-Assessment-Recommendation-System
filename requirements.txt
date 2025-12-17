@@ -1,7 +1,6 @@
-gradio
+flask
 sentence-transformers
 faiss-cpu
 torch
 numpy
 pandas
-scikit-learn
