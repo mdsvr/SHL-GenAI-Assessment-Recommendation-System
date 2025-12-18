@@ -6,6 +6,9 @@ An intelligent assessment recommendation system designed to match hiring require
 
 This system leverages vector embeddings and similarity search to bridge the gap between complex job descriptions and a curated catalog of SHL assessments. It provides not only recommendations but also context-aware explanations for why specific assessments were chosen.
 
+## 🏗️ Architecture
+
+![Technical Architecture](assets/architecture.png)
 
 *Figure 1: High-level technical architecture of the SHL Assessment Recommendation System.*
 
