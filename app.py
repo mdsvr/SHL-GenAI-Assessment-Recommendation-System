@@ -1,77 +1,112 @@
-import gradio as gr
+import streamlit as st
 import faiss
 import pickle
-import numpy as np
 from sentence_transformers import SentenceTransformer
 
-# ---------------- CONFIG ----------------
-FAISS_INDEX_PATH = "data/shl_faiss.index"
-METADATA_PATH = "data/shl_metadata.pkl"
-MODEL_NAME = "all-MiniLM-L6-v2"
-TOP_K_DEFAULT = 10
-# ----------------------------------------
+# -------------------------------------------------
+# Page configuration
+# -------------------------------------------------
+st.set_page_config(
+    page_title="SHL Assessment Recommendation System",
+    page_icon="🧠",
+    layout="centered"
+)
 
-print("Loading FAISS index...")
-index = faiss.read_index(FAISS_INDEX_PATH)
+st.title("🧠 SHL Assessment Recommendation System")
+st.caption("Semantic Retrieval using FAISS (Production-Safe)")
 
-print("Loading metadata...")
-with open(METADATA_PATH, "rb") as f:
-    metadata = pickle.load(f)
+# -------------------------------------------------
+# Load trained FAISS index and metadata (cached)
+# -------------------------------------------------
+@st.cache_resource
+def load_assets():
+    index = faiss.read_index("data/shl_faiss.index")
+    with open("data/shl_metadata.pkl", "rb") as f:
+        metadata = pickle.load(f)
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    return index, metadata, model
 
-print("Loading embedding model...")
-model = SentenceTransformer(MODEL_NAME)
+index, metadata, embedder = load_assets()
 
+# -------------------------------------------------
+# FAISS retrieval logic
+# -------------------------------------------------
 def retrieve_assessments(query, top_k):
-    if not query.strip():
-        return "Please enter a valid job description."
-
-    query_vec = model.encode([query], convert_to_numpy=True).astype("float32")
+    query_vec = embedder.encode([query], convert_to_numpy=True).astype("float32")
     _, indices = index.search(query_vec, top_k)
 
     results = []
     for i in indices[0]:
         row = metadata[i]
-        results.append(
+        results.append({
+            "name": row.get("name", "N/A"),
+            "url": row.get("url", ""),
+            "duration": row.get("duration", "N/A"),
+            "test_type": row.get("test_type", "N/A"),
+            "adaptive_support": row.get("adaptive_support", "Unknown"),
+            "remote_support": row.get("remote_support", "Unknown"),
+        })
+    return results
+
+# -------------------------------------------------
+# Explanation logic (deterministic & auditable)
+# -------------------------------------------------
+def generate_explanation(query, assessments):
+    explanation = (
+        f"Based on the hiring requirement **'{query}'**, the following assessments "
+        f"were identified as the most relevant using semantic similarity:\n\n"
+    )
+
+    for idx, a in enumerate(assessments, 1):
+        explanation += (
+            f"**{idx}. {a['name']}**\n"
+            f"- Suitable for the required skill set\n"
+            f"- Duration: {a['duration']} minutes\n"
+            f"- Test Type: {a['test_type']}\n"
+            f"- Adaptive Support: {a['adaptive_support']}\n"
+            f"- Remote Support: {a['remote_support']}\n\n"
+        )
+
+    explanation += (
+        "These recommendations were generated using vector similarity search "
+        "over SHL’s assessment catalog, ensuring objective and reproducible results."
+    )
+
+    return explanation
+
+# -------------------------------------------------
+# UI
+# -------------------------------------------------
+user_query = st.text_area(
+    "Describe the role you are hiring for:",
+    placeholder="e.g., Java developer with backend and enterprise experience",
+    height=120
+)
+
+top_k = st.slider("Number of recommendations", min_value=3, max_value=15, value=5)
+
+if st.button("Get Recommendations"):
+    if not user_query.strip():
+        st.warning("Please enter a valid job description.")
+        st.stop()
+
+    with st.spinner("Finding best matching assessments..."):
+        recommendations = retrieve_assessments(user_query, top_k)
+
+    st.subheader("🔎 Recommended Assessments")
+
+    for r in recommendations:
+        st.markdown(
             f"""
-### {row.get('name', 'Unknown')}
-- **URL:** {row.get('url', '')}
-- **Duration:** {row.get('duration', 'Unknown')} minutes
-- **Test Type:** {row.get('test_type', 'Unknown')}
-- **Adaptive Support:** {row.get('adaptive_support', 'Unknown')}
-- **Remote Support:** {row.get('remote_support', 'Unknown')}
+**{r['name']}**  
+- Duration: {r['duration']} mins  
+- Test Type: {r['test_type']}  
+- Adaptive: {r['adaptive_support']}  
+- Remote: {r['remote_support']}  
+- URL: {r['url']}
 """
         )
 
-    return "\n".join(results)
-
-with gr.Blocks(title="SHL GenAI Assessment Recommendation") as demo:
-    gr.Markdown("# SHL GenAI Assessment Recommendation System")
-    gr.Markdown(
-        "Enter a job description or hiring requirement to get recommended SHL assessments."
-    )
-
-    query_input = gr.Textbox(
-        label="Job Description / Hiring Query",
-        lines=6,
-        placeholder="Hiring a customer service executive with sales and communication skills"
-    )
-
-    top_k_input = gr.Slider(
-        minimum=5,
-        maximum=15,
-        value=TOP_K_DEFAULT,
-        step=1,
-        label="Number of Recommendations"
-    )
-
-    output = gr.Markdown()
-
-    submit_btn = gr.Button("Recommend")
-
-    submit_btn.click(
-        retrieve_assessments,
-        inputs=[query_input, top_k_input],
-        outputs=output
-    )
-
-demo.launch()
+    st.subheader("🧠 Recommendation Explanation")
+    explanation = generate_explanation(user_query, recommendations)
+    st.write(explanation)
