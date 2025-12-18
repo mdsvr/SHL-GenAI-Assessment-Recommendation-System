@@ -2,6 +2,10 @@
 
 An intelligent assessment recommendation system designed to match hiring requirements with the most suitable SHL assessments using **Semantic Search** and **Retrieval Augmented Generation (RAG)** principles.
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://mdsvr-shl-genai-assessment-recommendation-system-app-d5f5f2.streamlit.app/)
+
+**🔗 Live Demo:** [https://mdsvr-shl-genai-assessment-recommendation-system-app-d5f5f2.streamlit.app/](https://mdsvr-shl-genai-assessment-recommendation-system-app-d5f5f2.streamlit.app/)
+
 ## 🚀 Overview
 
 This system leverages vector embeddings and similarity search to bridge the gap between complex job descriptions and a curated catalog of SHL assessments. It provides not only recommendations but also context-aware explanations for why specific assessments were chosen.
