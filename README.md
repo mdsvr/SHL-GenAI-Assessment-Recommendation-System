@@ -39,9 +39,7 @@ graph TD
     classDef highlight fill:#f9f,stroke:#333,stroke-width:2px;
     class E,F highlight;
     
-    %% Labels for RAG and Semantic Search
-    Note over E,F: **Semantic Search Component**
-    Note over D,H: **RAG (Retrieval-Augmented Generation) Flow**
+    %% Labels for RAG and Semantic Search handled via subgraph titles above
 ```
 
 ### Key Components
